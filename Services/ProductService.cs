@@ -3,23 +3,29 @@ using System.Text.Json;
 
 namespace blazorappdemo;
 
-public class ProductService
+public class ProductService : IProductService
 {
     private readonly HttpClient client;
 
     private readonly JsonSerializerOptions options; 
 
-    public ProductService( HttpClient httpClient, JsonSerializerOptions optionsJson)
+    public ProductService( HttpClient httpClient)
     {
         client = httpClient;
-        options = optionsJson;
+        options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     }
 
-    public async Task<List<Product>?> Get()
-    {
-        var response = await client.GetAsync("/v1/products");
-        return await JsonSerializer.DeserializeAsync<List<Product>>(await response.Content.ReadAsStreamAsync());
-    }
+        public async Task<List<Product>?> Get()
+        {
+            var response = await client.GetAsync("v1/products");
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new ApplicationException(content);
+            }
+
+            return JsonSerializer.Deserialize<List<Product>>(content, options);
+        }
 
         public async Task Add(Product product)
         {
@@ -41,3 +47,12 @@ public class ProductService
             }
         }
 }
+
+ public interface IProductService
+    {
+        Task<List<Product>?> Get();
+
+        Task Add(Product product);
+
+        Task Delete(int productId);
+    }
